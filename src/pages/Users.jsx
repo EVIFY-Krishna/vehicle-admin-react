@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { SocketContext } from '../context/SocketContext';
 import { Users as UsersIcon } from 'lucide-react';
 import { Table, Tag, Typography, Space, Input } from 'antd';
 import { useDebounce } from '../hooks/useDebounce';
@@ -13,12 +14,9 @@ const Users = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearch = useDebounce(searchTerm, 500);
     const { user } = useContext(AuthContext);
+    const { socket } = useContext(SocketContext);
 
-    useEffect(() => {
-        fetchUsers();
-    }, []);
-
-    const fetchUsers = async () => {
+    const fetchUsers = React.useCallback(async () => {
         setLoading(true);
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -30,7 +28,20 @@ const Users = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        fetchUsers();
+    }, [fetchUsers]);
+
+    useEffect(() => {
+        if (!socket) return;
+        const handleDataUpdated = (data) => {
+            if (data.entity === 'user') fetchUsers();
+        };
+        socket.on('data-updated', handleDataUpdated);
+        return () => socket.off('data-updated', handleDataUpdated);
+    }, [socket, fetchUsers]);
 
     const columns = [
         {

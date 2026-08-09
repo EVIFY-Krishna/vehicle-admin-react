@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { SocketContext } from '../context/SocketContext';
 import { MapPin } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { Table, Button, Modal, Form, Input, Typography, Space } from 'antd';
@@ -19,12 +20,9 @@ const Fleets = () => {
     const [editingId, setEditingId] = useState(null);
     const [form] = Form.useForm();
     const { user } = useContext(AuthContext);
+    const { socket } = useContext(SocketContext);
 
-    useEffect(() => {
-        fetchFleets();
-    }, []);
-
-    const fetchFleets = async () => {
+    const fetchFleets = React.useCallback(async () => {
         setLoading(true);
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -36,7 +34,20 @@ const Fleets = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        fetchFleets();
+    }, [fetchFleets]);
+
+    useEffect(() => {
+        if (!socket) return;
+        const handleDataUpdated = (data) => {
+            if (data.entity === 'fleet') fetchFleets();
+        };
+        socket.on('data-updated', handleDataUpdated);
+        return () => socket.off('data-updated', handleDataUpdated);
+    }, [socket, fetchFleets]);
 
     const showModal = (fleet = null) => {
         if (fleet) {

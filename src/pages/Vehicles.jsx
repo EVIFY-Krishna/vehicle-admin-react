@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { SocketContext } from '../context/SocketContext';
 import { Plus, Filter } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { Table, Button, Modal, Form, Input, Select, Typography, Space, Upload, Tag } from 'antd';
@@ -19,6 +20,8 @@ const Vehicles = () => {
     const [loading, setLoading] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
     
+    const { socket } = useContext(SocketContext);
+
     // Modal states
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -27,12 +30,7 @@ const Vehicles = () => {
     
     const { user } = useContext(AuthContext);
 
-    useEffect(() => {
-        fetchVehicles();
-        fetchFleets();
-    }, [statusFilter, debouncedSearch]);
-
-    const fetchVehicles = async () => {
+    const fetchVehicles = React.useCallback(async () => {
         setLoading(true);
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -48,9 +46,9 @@ const Vehicles = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, statusFilter, debouncedSearch]);
 
-    const fetchFleets = async () => {
+    const fetchFleets = React.useCallback(async () => {
         try {
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
             const config = { headers: { Authorization: `Bearer ${user.token}` } };
@@ -59,7 +57,22 @@ const Vehicles = () => {
         } catch (err) {
             console.error("Error fetching fleets", err);
         }
-    };
+    }, [user]);
+
+    useEffect(() => {
+        fetchVehicles();
+        fetchFleets();
+    }, [fetchVehicles, fetchFleets]);
+
+    useEffect(() => {
+        if (!socket) return;
+        const handleDataUpdated = (data) => {
+            if (data.entity === 'vehicle') fetchVehicles();
+            if (data.entity === 'fleet') fetchFleets();
+        };
+        socket.on('data-updated', handleDataUpdated);
+        return () => socket.off('data-updated', handleDataUpdated);
+    }, [socket, fetchVehicles, fetchFleets]);
 
     const showModal = (vehicle = null) => {
         if (vehicle) {

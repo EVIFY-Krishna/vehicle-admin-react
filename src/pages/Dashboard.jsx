@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { SocketContext } from '../context/SocketContext';
 import { Truck, Navigation, Zap, Wrench, Download } from 'lucide-react';
 import { Card, Row, Col, Typography, Progress, Tag, Button } from 'antd';
 
@@ -9,9 +10,9 @@ const { Title, Text } = Typography;
 const Dashboard = () => {
     const [stats, setStats] = useState({ total: 0, active: 0, charging: 0, maintenance: 0 });
     const { user } = useContext(AuthContext);
+    const { socket } = useContext(SocketContext);
 
-    useEffect(() => {
-        const fetchVehicles = async () => {
+    const fetchVehicles = useCallback(async () => {
             try {
                 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
                 const config = { headers: { Authorization: `Bearer ${user.token}` } };
@@ -26,11 +27,25 @@ const Dashboard = () => {
                 });
             } catch (error) {
                 console.error("Error fetching vehicles for stats", error);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        fetchVehicles();
+    }, [fetchVehicles]);
+
+    useEffect(() => {
+        if (!socket) return;
+        
+        const handleDataUpdated = (data) => {
+            if (data.entity === 'vehicle') {
+                fetchVehicles();
             }
         };
 
-        fetchVehicles();
-    }, [user]);
+        socket.on('data-updated', handleDataUpdated);
+        return () => socket.off('data-updated', handleDataUpdated);
+    }, [socket, fetchVehicles]);
 
     // Derived values for the UI mockup
     const activePercent = stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0;

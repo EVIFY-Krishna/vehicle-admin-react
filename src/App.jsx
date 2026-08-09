@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthContext, AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { SocketProvider } from './context/SocketContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -46,10 +47,12 @@ const App = () => {
     return (
         <BrowserRouter>
             <AuthProvider>
-                <ThemeProvider>
-                    <AppRoutes />
-                    <ToastContainer position="top-right" />
-                </ThemeProvider>
+                <SocketProvider>
+                    <ThemeProvider>
+                        <AppRoutes />
+                        <ToastContainer position="top-right" />
+                    </ThemeProvider>
+                </SocketProvider>
             </AuthProvider>
         </BrowserRouter>
     );
