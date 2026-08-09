@@ -15,6 +15,7 @@ const Vehicles = () => {
     const [vehicles, setVehicles] = useState([]);
     const [fleets, setFleets] = useState([]);
     const [statusFilter, setStatusFilter] = useState('');
+    const [fleetFilter, setFleetFilter] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearch = useDebounce(searchTerm, 500);
     const [loading, setLoading] = useState(false);
@@ -37,6 +38,7 @@ const Vehicles = () => {
             const config = { headers: { Authorization: `Bearer ${user.token}` } };
             let url = `${API_URL}/vehicles?limit=50`;
             if (statusFilter) url += `&status=${statusFilter}`;
+            if (fleetFilter) url += `&fleet=${fleetFilter}`;
             if (debouncedSearch) url += `&keyword=${debouncedSearch}`;
             
             const { data } = await axios.get(url, config);
@@ -46,7 +48,7 @@ const Vehicles = () => {
         } finally {
             setLoading(false);
         }
-    }, [user, statusFilter, debouncedSearch]);
+    }, [user, statusFilter, fleetFilter, debouncedSearch]);
 
     const fetchFleets = React.useCallback(async () => {
         try {
@@ -297,6 +299,17 @@ const Vehicles = () => {
                             <Option value="active">Active</Option>
                             <Option value="charging">Charging</Option>
                             <Option value="maintenance">Maintenance</Option>
+                        </Select>
+
+                        <Select 
+                            value={fleetFilter} 
+                            onChange={setFleetFilter} 
+                            style={{ width: 180 }}
+                        >
+                            <Option value="">All Fleets</Option>
+                            {fleets.map(f => (
+                                <Option key={f._id} value={f._id}>{f.name}</Option>
+                            ))}
                         </Select>
                     </div>
                     
